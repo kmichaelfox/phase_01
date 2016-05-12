@@ -19,13 +19,19 @@ enum NoteLength {
     SIXTEENTH = 4,
 };
 
+enum NoteType {
+    PIZZ = 0,
+    ARCO = 1
+};
+
 class Note {
 public:
     int note;
     NoteLength dur;
-//public:
-    Note(int n, NoteLength d);
-    //Note(Note & n);
+    NoteType type;
+    int dots;
+    Note(int n, NoteLength d, NoteType t, int dots = 0);
+    Note(Note & n, int newNote);
 };
 
 #endif /* Note_hpp */

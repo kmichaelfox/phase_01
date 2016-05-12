@@ -3,6 +3,7 @@
 #include "ofMain.h"
 #include "Staff.hpp"
 #include "Player.hpp"
+#include "ScoreManager.hpp"
 
 class ofApp : public ofBaseApp{
 
@@ -37,6 +38,7 @@ class ofApp : public ofBaseApp{
     bool cmd = false;
     
     //Player *p;
-    vector<Player *> players;
+    //vector<Player *> players;
+    ScoreManager manager;
     //Staff *s;
 };

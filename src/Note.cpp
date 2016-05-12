@@ -8,12 +8,16 @@
 
 #include "Note.hpp"
 
-Note::Note(int n, NoteLength d)
+Note::Note(int n, NoteLength d, NoteType t, int dots)
 : note(n)
 , dur(d)
+, dots(dots)
+, type(t)
 {}
 
-//Note::Note(Note &n)
-//: note(n.note)
-//, dur(n.dur)
-//{}
+Note::Note(Note &n, int newNote)
+: note(newNote)
+, dur(n.dur)
+, dots(n.dots)
+, type(n.type)
+{}

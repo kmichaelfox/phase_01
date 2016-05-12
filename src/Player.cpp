@@ -8,6 +8,8 @@
 
 #include "Player.hpp"
 
+using namespace std;
+
 Player::Player() {
     fbo.allocate(1920, 1080);
     
@@ -17,22 +19,24 @@ Player::Player() {
     staff = new Staff(GENERIC);
 }
 
-Player::Player(Instrument instr) {
+Player::Player(Instrument instr, string name) {
     fbo.allocate(1920, 1080);
     
     drawWidth = 1920;
     drawHeight = 1080;
     
     staff = new Staff(instr);
+    staff->setName(name);
 }
 
-Player::Player(ClefType clef) {
+Player::Player(ClefType clef, string name) {
     fbo.allocate(1920, 1080);
     
     drawWidth = 1920;
     drawHeight = 1080;
     
     staff = new Staff(clef);
+    staff->setName(name);
 }
 
 Player::~Player() {
@@ -57,6 +61,14 @@ void Player::draw(int x, int y) {
     fbo.draw(x, y, drawWidth, drawHeight);
 }
 
+string Player::getName() {
+    return staff->getName();
+}
+
+void Player::setName(string n) {
+    staff->setName(n);
+}
+
 int Player::getWidth() {
     return drawWidth;
 }
@@ -79,13 +91,41 @@ float Player::getTempo() {
     return tempo;
 }
 
-void Player::setTempo(float tempo) {
-    this->tempo = tempo;
-    staff->setTempo(tempo);
+void Player::setTempo(float t) {
+    tempo = t;
+    staff->setTempo(t);
+}
+
+Range Player::getRange() {
+    return staff->getRange();
+}
+
+bool Player::isFirstChair() {
+    string n = staff->getName();
+    if (n.empty() && n.size() > 2) {
+        return false;
+    }
+    
+    n = n.substr(n.size() - 2, 2);
+    std::transform(n.begin(), n.end(), n.begin(), ::tolower);
+    
+    if (n.compare(" i") == 0 || n.compare(".i") == 0) {
+        return true;
+    }
+    
+    return false;
 }
 
 void Player::idle(bool immediately) {
     staff->clearSequenceQueue(immediately);
+}
+
+bool Player::isActive() {
+    return staff->isActive();
+}
+
+void Player::activate(bool state) {
+    staff->activate(state);
 }
 
 void Player::queueSequence(Sequence seq, float tempo) {

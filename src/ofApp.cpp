@@ -5,81 +5,88 @@
 
 //--------------------------------------------------------------
 void ofApp::setup(){
-    windowAspect = ofGetWindowWidth() / ofGetWindowHeight();
+    //windowAspect = ofGetWindowWidth() / ofGetWindowHeight();
+    ofSetBackgroundColor(ofColor::black);
+    manager.resize(ofGetWindowWidth(), ofGetWindowHeight());
     
-    if (numPlayers != 1) {
-        while (numPlayers > pow(2, dimensions)) {dimensions++;}
-    }
-    cout << dimensions << endl;
+//    if (numPlayers != 1) {
+//        while (numPlayers > pow(2, dimensions)) {dimensions++;}
+//    }
     
     //s = new Staff(BASS);
-    for (int i = 0; i < numPlayers; i++) {
-        Player *p = new Player(VIOLIN);
-        p->setTempo(60+(i*0.1));
-        if (windowAspect < p->getAspectRatio()) {
-            p->setWidth(ofGetWindowWidth()/dimensions);
-        } else {
-            p->setHeight(ofGetWindowHeight()/dimensions);
-        }
-        
-        players.push_back(p);
+    manager.addPlayer(new Player(VIOLIN, "vn. i"));
+    manager.addPlayer(new Player(VIOLIN, "vn. ii"));
+    manager.addPlayer(new Player(VIOLA, "va."));
+    manager.addPlayer(new Player(VIOLONCELLO, "vc."));
+    for (int i = 0; i < manager.getNumPlayers(); i++) {
+        manager.setPlayerTempo(i, 60+(i*0.05));
     }
     
-    NoteEvent::setOscSender(new ofxOscSender(), "/phase_1");
+    
     //cout << NoteEvent::getOscAddr() << endl;
 }
 
 //--------------------------------------------------------------
 void ofApp::update(){
-
+    manager.update();
 }
 
 //--------------------------------------------------------------
 void ofApp::draw(){
-    int i = 0;
-    for (Player *& p : players) {
-        p->draw(ofGetWindowWidth()/dimensions * (i%dimensions),
-                p->getHeight()*(i/dimensions));
-        ++i;
-    }
-    
+    manager.draw();
 }
 
 //--------------------------------------------------------------
 void ofApp::keyPressed(int key){
-    if (key == 'a') {
-        active = !active;
-    } else if (key == 'i') {
-        cout << "idle " << cmd << endl;
-        for (Player *& p : players) {
-            p->idle(cmd); // if shift=true, kill seq immediately
-        }
-    } else if (key == 'n') {
-        Sequence s;
-        int sequenceLength = ofRandom(15) + 3;
-        for (int i = 0; i < sequenceLength; i++) {
-            if (ofRandom(10) > 0.5) {
-                s.push_back(Note((int)ofRandom(55, 80), (NoteLength)((int)ofRandom(2, 4.9))));
+    switch(key) {
+        case '1':
+        case '2':
+        case '3':
+        case '4':
+            manager.activate(key - 48);
+            break;
+            
+        case 'i': {
+            if (cmd) {
+                manager.stop();
             } else {
-                s.push_back((Note(-1, (NoteLength)((int)ofRandom(2, 4.9)))));
+                manager.pause();
             }
-            //s.push_back(Note(0, (NoteLength)((int)ofRandom(3))));
+            break;
         }
-        for (Player *& p : players) {
-            p->queueSequence(s, p->getTempo());
-        }
-        
-        
-        //p->createSingleNote(0);
-    } else if (key == OF_KEY_COMMAND) {
-        cmd = true;
-        //cout << shift << endl;
+            
+        case 's':
+            manager.newSequence();
+            
+        case OF_KEY_COMMAND:
+            cmd = true;
+            break;
     }
+//    if (key == 'a') {
+//        active = !active;
+//    } else if (key == 'i') {
+//        if (cmd) {
+//            manager.stop();
+//        } else {
+//            manager.pause();
+//        }
+////        for (Player *& p : players) {
+////            p->idle(cmd); // if cmd=true, kill seq immediately
+////        }
+//    } else if (key == 'n') {
+//        
+//        
+//        
+//        //p->createSingleNote(0);
+//    } else if (key == OF_KEY_COMMAND) {
+//        cmd = true;
+//        //cout << shift << endl;
+//    }
 }
 
 //--------------------------------------------------------------
 void ofApp::keyReleased(int key){
-    if (key == OF_KEY_SHIFT) {
+    if (key == OF_KEY_COMMAND) {
         cmd = false;
     }
 }
@@ -116,17 +123,17 @@ void ofApp::mouseExited(int x, int y){
 
 //--------------------------------------------------------------
 void ofApp::windowResized(int w, int h){
-    windowAspect = w / h;
-    
-    for (Player * &p : players) {
-        if (windowAspect < p->getAspectRatio()) {
-            //        fbo.draw(0, 0, ofGetWindowWidth(), ofGetWindowWidth() * fbo.getHeight() / fbo.getWidth());
-            p->setWidth(ofGetWindowWidth()/dimensions);
-        } else {
-            //        fbo.draw(0, 0, ofGetWindowHeight() * fbo.getWidth() / fbo.getHeight(), ofGetWindowHeight());
-            p->setHeight(ofGetWindowHeight()/dimensions);
-        }
-    }
+//    windowAspect = w / h;
+//    
+//    for (Player * &p : players) {
+//        if (windowAspect < p->getAspectRatio()) {
+//            //        fbo.draw(0, 0, ofGetWindowWidth(), ofGetWindowWidth() * fbo.getHeight() / fbo.getWidth());
+//            p->setWidth(ofGetWindowWidth()/dimensions);
+//        } else {
+//            //        fbo.draw(0, 0, ofGetWindowHeight() * fbo.getWidth() / fbo.getHeight(), ofGetWindowHeight());
+//            p->setHeight(ofGetWindowHeight()/dimensions);
+//        }
+//    }
 }
 
 //--------------------------------------------------------------
@@ -143,11 +150,11 @@ void ofApp::exit() {
 //    if (p != nullptr) {
 //        delete p;
 //    }
-    if (!players.empty()) {
-        for (auto it = players.begin(); it != players.end(); ) {
-            delete (*it);
-            ++it;
-        }
-        players.clear();
-    }
+//    if (!players.empty()) {
+//        for (auto it = players.begin(); it != players.end(); ) {
+//            delete (*it);
+//            ++it;
+//        }
+//        players.clear();
+//    }
 }

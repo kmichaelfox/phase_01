@@ -18,13 +18,16 @@ class Staff;
 class Player {
 public:
     Player();
-    Player(Instrument instr);
-    Player(ClefType clef);
+    Player(Instrument instr, std::string name = "");
+    Player(ClefType clef, std::string name = "");
     ~Player();
     
     void update();
     void draw();
     void draw(int x, int y);
+    
+    std::string getName();
+    void setName(std::string n);
     
     int getWidth();
     void setWidth(int width);
@@ -35,7 +38,13 @@ public:
     float getTempo();
     void setTempo(float tempo);
     
+    Range getRange();
+    
+    bool isFirstChair();
+    
     void idle(bool immediately=false);
+    bool isActive();
+    void activate(bool state);
     
     void queueSequence(Sequence seq, float tempo);
     void createSingleNote(int note);

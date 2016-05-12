@@ -13,10 +13,11 @@
 
 long int NoteEvent::noteIDCounter = 0;
 auto_ptr<ofxOscSender> NoteEvent::oscSender;
-string NoteEvent::addr = string();
+string NoteEvent::addr;
 
-NoteEvent::NoteEvent(int note, int staffPos, Accidental acc, float offset, float duration)
+NoteEvent::NoteEvent(int note, NoteType t, int staffPos, Accidental acc, float offset, float duration)
 : note(note)
+, type(t)
 , staffPos(staffPos)
 , acc(acc)
 , offset(offset)
@@ -26,7 +27,7 @@ NoteEvent::NoteEvent(int note, int staffPos, Accidental acc, float offset, float
 
 NoteEvent::~NoteEvent() {
     // send noteoff via osc
-    if (note >= 0 && NoteEvent::isOscSenderInit()) {
+    if (note >= 0 && NoteEvent::isOscSenderInit() && type == ARCO) {
         ofxOscMessage msg;
         msg.setAddress(NoteEvent::getOscAddr());
         msg.addInt32Arg(noteID);
@@ -49,6 +50,7 @@ void NoteEvent::tick(float timeElapsed) {
                 msg.setAddress(NoteEvent::getOscAddr());
                 msg.addInt32Arg(noteID);
                 msg.addStringArg("on");
+                msg.addStringArg(type==PIZZ?"pizz":"arco");
                 msg.addIntArg(note);
                 NoteEvent::oscSender->sendMessage(msg);
             }
@@ -61,6 +63,7 @@ void NoteEvent::tick(float timeElapsed) {
                 msg.setAddress(NoteEvent::getOscAddr());
                 msg.addInt32Arg(noteID);
                 msg.addStringArg("on");
+                msg.addStringArg(type==PIZZ?"pizz":"arco");
                 msg.addIntArg(note);
                 NoteEvent::oscSender->sendMessage(msg);
             }
@@ -71,7 +74,7 @@ void NoteEvent::tick(float timeElapsed) {
 }
 
 void NoteEvent::toggleNoteOff() {
-    if (note >= 0 && NoteEvent::isOscSenderInit()) {
+    if (note >= 0 && NoteEvent::isOscSenderInit() && type == ARCO) {
         ofxOscMessage msg;
         msg.setAddress(NoteEvent::getOscAddr());
         msg.addInt32Arg(noteID);
@@ -90,6 +93,10 @@ float NoteEvent::getDuration() {
 
 int NoteEvent::getNote() {
     return note;
+}
+
+NoteType NoteEvent::getNoteType() {
+    return type;
 }
 
 Accidental NoteEvent::getAccidental() {

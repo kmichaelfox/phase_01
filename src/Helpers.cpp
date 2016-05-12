@@ -9,6 +9,7 @@
 #include "Helpers.hpp"
 #include <stdio.h>
 #include <unistd.h>
+#include "Staff.hpp"
 
 using namespace Helpers;
 using namespace std;
@@ -43,4 +44,29 @@ std::string exec(const char* cmd) {
             result += buffer;
     }
     return result;
+}
+
+vector<Note> Helpers::rangedMidiFromPitchClass(vector<Note> seq, Range r, bool octaveUp) {
+    vector<Note> s;
+    int lowestNote = 15;
+    //int highestNote = 0;
+    
+    for (Note & n : seq) {
+        if (n.note < lowestNote) lowestNote = n.note;
+        //if (n.note > highestNote) highestNote = n.note;
+    }
+    
+    int octaveDisplacement = 0;
+    while (octaveDisplacement*12+lowestNote < r.low) {
+        octaveDisplacement++;
+    }
+    if (octaveUp) octaveDisplacement++;
+    
+    for (Note & n : seq) {
+        int transposedNote = octaveDisplacement*12+n.note;
+        if (transposedNote > r.high) transposedNote -= 12;
+        s.push_back(Note(n, transposedNote));
+    }
+    
+    return s;
 }

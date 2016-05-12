@@ -10,6 +10,10 @@
 #define Helpers_hpp
 
 #include <iostream>
+#include <vector>
+#include "Note.hpp"
+
+struct Range;
 
 namespace PortSearch {
 enum Type {
@@ -20,6 +24,8 @@ enum Type {
 
 namespace Helpers {
     int scanForProcessPort(std::string processName, PortSearch::Type isBlocking);
+    
+    std::vector<Note> rangedMidiFromPitchClass(std::vector<Note> seq, Range r, bool octaveUp = false);
 }
 
 

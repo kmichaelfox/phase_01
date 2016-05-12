@@ -15,6 +15,7 @@
 #include <deque>
 #include "Note.hpp"
 #include "NoteEvent.hpp"
+#include "DynamicEvent.hpp"
 
 enum ClefType : short;
 enum Key : short;
@@ -24,13 +25,14 @@ struct Range;
 typedef std::vector<Note> Sequence;
 typedef std::deque<Sequence> SequenceQueue;
 typedef std::deque<NoteEvent*> EventQueue;
-
+typedef std::deque<DynamicEvent*> DynamicQueue;
 
 
 class Staff {
     ClefType clef;
     InstrumentData* instrument;
     Key key;
+    std::string name;
     
     int drawWidth = 1920;
     int drawHeight = 1080;
@@ -40,7 +42,7 @@ class Staff {
     int playheadThickness = 5;
     int playheadOffsetDistance = 600;
     
-    bool active = true;
+    bool active = false;
     bool idleOnNextCycle = false;
     int activeHighlightBorderSize = 5;
     
@@ -56,6 +58,7 @@ class Staff {
     
     SequenceQueue sequences;
     EventQueue activeNotes;
+    DynamicQueue dynamics;
     
 public:
     Staff(){}
@@ -72,22 +75,30 @@ public:
     void setTempo(float tempo);
     Range getInstrumentRange();
     void setInstrumentRange(Range r);
+    std::string getName();
+    void setName(std::string n);
+    Range getRange();
     
     void clearSequenceQueue(bool immediately);
     void queueSequence(Sequence seq, float tempo);
     bool isStartPointClear();
+    bool isActive();
+    void activate(bool state);
     
     void createNote(int note);
+    void createDynamic(Dynamic d);
     
 private:
     static ofTrueTypeFont notationFont;
     static ofTrueTypeFont accidentalsFont;
-    ofShader shader;
+    static ofTrueTypeFont dynamicsFont;
+    static ofTrueTypeFont labelFont;
     
     //Staff(ClefType _clef, Instrument _instrument, bool transposing);
     InstrumentData* getDataForInstrument(Instrument);
     NoteEvent* eventFromNote(Note note, float tempo);
     void drawNoteEvent(NoteEvent* &e);
+    void drawDynamicEvent(DynamicEvent* &d);
     int degreeFromMidi(int note);
     Accidental degreeAccidentalFromMidi(int note);
     int transposeForInstrument(int note);

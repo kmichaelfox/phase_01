@@ -13,6 +13,8 @@
 
 ofTrueTypeFont Staff::notationFont;
 ofTrueTypeFont Staff::accidentalsFont;
+ofTrueTypeFont Staff::dynamicsFont;
+ofTrueTypeFont Staff::labelFont;
 
 Staff::Staff(ClefType _clef, bool transposing) {
     instrument = getDataForInstrument(Instrument::GENERIC);
@@ -26,6 +28,16 @@ Staff::Staff(ClefType _clef, bool transposing) {
     if (!accidentalsFont.isLoaded()) {
         accidentalsFont.load("Fonts/Accidentals/Accid.ttf", 80, true, true);
     }
+    
+    if (!dynamicsFont.isLoaded()) {
+        dynamicsFont.load("Fonts/Dynamics/Times_it.ttf", 60, true, true);
+    }
+    
+    if (!labelFont.isLoaded()) {
+        labelFont.load("Fonts/Dynamics/Times_it.ttf", 80, true, true);
+    }
+    
+    createDynamic(ppp);
     
     timer = ofGetElapsedTimef();
 }
@@ -47,12 +59,27 @@ Staff::Staff(Instrument _instrument) {
         accidentalsFont.load("Fonts/Accidentals/Accid.ttf", 80, true, true);
     }
     
+    if (!dynamicsFont.isLoaded()) {
+        dynamicsFont.load("Fonts/Dynamics/Times_it.ttf", 60, true, true);
+    }
+    
+    if (!labelFont.isLoaded()) {
+        labelFont.load("Fonts/Dynamics/Times_it.ttf", 80, true, true);
+    }
+    
+    createDynamic(ppp);
+    
     timer = ofGetElapsedTimef();
 }
 
 Staff::~Staff() {
     for (NoteEvent* &ne : activeNotes) {
         ne->toggleNoteOff();
+        delete ne;
+    }
+    
+    for (DynamicEvent* &de : dynamics) {
+        delete de;
     }
     
     if (instrument != nullptr) {
@@ -71,6 +98,9 @@ void Staff::draw(float x, float y) {
     ofPushMatrix();
     ofTranslate(100, drawHeight / 2);
     
+    // draw label
+    labelFont.drawString(name, 0, -staffLineDistance * 8);
+    
     // draw Staff lines
     ofTranslate(0, -3);
     ofSetColor(ofColor::white);
@@ -84,33 +114,22 @@ void Staff::draw(float x, float y) {
     ofSetColor(ofColor::white);
     drawClef();
     
-    // Draw Playhead
-    ofPushMatrix();
-    //ofTranslate(positionX,0);
-    //ofSetColor(ofColor::darkGray);
-    //ofDrawRectangle(0, 0 - (staffLineDistance / 4.0f), 1 * (drawWidth * scrollSpeed), staffLineDistance / 2);
-    
-//    ofSetColor(ofColor::black);
-//    ofRotate(-20);
-//    ofDrawEllipse(0, 0, staffLineDistance*2.25, staffLineDistance*1.5);
-//    ofRotate(20);
-    ofPopMatrix();
-    //ofTranslate(-300,0);
-    
+    // Move draw position to the right of the clef
     ofTranslate(playheadOffsetDistance - 2, 0);
+    
+    // Draw Dynamics
+    for (DynamicEvent* & d : dynamics) {
+        drawDynamicEvent(d);
+    }
+    
+    // Draw NoteEvents
     ofSetColor(ofColor::white);
-    //    ofDrawEllipse(0, 0, staffLineDistance*3, staffLineDistance*2);
-    //ofDrawEllipse(0, 0, staffLineDistance*0.5, staffLineDistance*2);
     for (NoteEvent* & e : activeNotes) {
-//        if (e->getNote() != -1) {
-//            ofDrawRectangle(e->getOffset()*scrollSpeed*drawWidth, 0-(staffLineDistance/4.0f), e->getDuration()*(drawWidth*scrollSpeed), staffLineDistance/2);
-//            ofDrawEllipse(e->getOffset()*scrollSpeed*drawWidth, 0, staffLineDistance*0.5, staffLineDistance*2);
-//        }
-//        e->tick(dTime);
         drawNoteEvent(e);
     }
-    ofTranslate(2, 0);
     
+    // Draw Playhead
+    ofTranslate(2, 0);
     ofSetColor(ofColor::red);
     ofDrawRectangle(0, -drawHeight / 2, -playheadThickness, drawHeight);
     ofPopMatrix();
@@ -119,14 +138,14 @@ void Staff::draw(float x, float y) {
     
     
     
-    
-    ofPushMatrix();
-    ofTranslate(100, drawHeight*5/6);
-    ofSetColor(ofColor::red);
-    ofDrawRectangle(0, -50-5, staffWidth, 10);
-    //ofDrawLine(0, 0, staffWidth, 0);
-    ofDrawRectangle(0, 50-5, staffWidth, 10);
-    ofPopMatrix();
+    // Draw dynamics curve pipeline
+//    ofPushMatrix();
+//    ofTranslate(100, drawHeight*5/6);
+//    ofSetColor(ofColor::red);
+//    ofDrawRectangle(0, -50-5, staffWidth, 10);
+//    //ofDrawLine(0, 0, staffWidth, 0);
+//    ofDrawRectangle(0, 50-5, staffWidth, 10);
+//    ofPopMatrix();
     
     
     
@@ -149,10 +168,24 @@ void Staff::draw(float x, float y) {
     //positionX -= (dTime * scrollSpeed * drawWidth);
     
     // clean up completed NoteEvents in activeNotes
-    for (auto i = activeNotes.begin(); i != activeNotes.end(); ++i) {
-        if ((*i)->isCompleted()) {
-            delete (*i);
-            activeNotes.erase(i);
+    for (auto it = activeNotes.begin(); it != activeNotes.end(); ++it) {
+        if ((*it)->isCompleted()) {
+            delete (*it);
+            activeNotes.erase(it);
+        }
+    }
+    
+    // clean up inactive DynamicEvents in dynamics
+    for (auto it = dynamics.begin(); it != dynamics.end(); ++it) {
+        if ((*it)->isCompleted()) {
+            delete (*it);
+            dynamics.erase(it);
+        }
+        if ((it+1) != dynamics.end()) {
+            if ((*(it+1))->getOffset() < 0.5) {
+                delete (*it);
+                dynamics.erase(it);
+            }
         }
     }
     
@@ -193,6 +226,18 @@ void Staff::setTempo(float tempo) {
     this->tempo = tempo;
 }
 
+string Staff::getName() {
+    return name;
+}
+
+void Staff::setName(string n) {
+    name = n;
+}
+
+Range Staff::getRange() {
+    return instrument->range;
+}
+
 Range Staff::getInstrumentRange() {
     return instrument->range;
 }
@@ -222,47 +267,75 @@ bool Staff::isStartPointClear() {
     return true;
 }
 
+bool Staff::isActive() {
+    return active;
+}
+
+void Staff::activate(bool state) {
+    active = state;
+    cout << "activating" << endl;
+}
+
 void Staff::createNote(int note) {
     if (sequences.empty()) {
         sequences.push_back(Sequence());
     }
     if (ofRandom(10) > 0.5) {
-        sequences.front().push_back(Note((int)ofRandom(40, 70), (NoteLength)((int)ofRandom(2, 4.9))));
+        sequences.front().push_back(Note((int)ofRandom(40, 70), (NoteLength)((int)ofRandom(2, 4.9)), PIZZ));
     } else {
-        sequences.front().push_back((Note(-1, (NoteLength)((int)ofRandom(2, 4.9)))));
+        sequences.front().push_back((Note(-1, (NoteLength)((int)ofRandom(2, 4.9)), PIZZ)));
     }
     //activeNotes.push_back(eventFromNote(Note((int)ofRandom(40, 70), (NoteLength)((int)ofRandom(4.9))), tempo));
 }
 
+void Staff::createDynamic(Dynamic d) {
+     dynamics.push_back(new DynamicEvent(d, 3));
+}
+
 void Staff::drawNoteEvent(NoteEvent* &e) {
     if (e->getNote() != -1) {
-//        int centerNote = degreeFromMidi(Clef::ClefData.at(ALTO).centerNote);
-//        int staffPosition = centerNote - e->;
-        //int midiNote = e->getNote();
-        //if (transposeFlag) midiNote += instrument->transposition;
-        //int octaveSplit = (midiNote - centerNote) / 12;
-        //int intervalSplit = (degreeFromMidi(midiNote) - degreeFromMidi(centerNote)) % 8;
-        //cout << intervalSplit << " " << octaveSplit << endl;
-        //cout << e->getNote() - centerNote << endl;
         float offsetX = e->getOffset()*scrollSpeed*drawWidth;
         float offsetY = (e->getStaffPosition()*staffLineDistance);
-        ofSetColor(ofColor::gray);
-        ofDrawRectangle(
-                        offsetX,
-                        offsetY-(staffLineDistance/4.0f),
-                        e->getDuration()*(drawWidth*scrollSpeed),
-                        staffLineDistance/2
-                        );
-        ofSetColor(ofColor::lightGray);
-        ofNoFill();
-        ofDrawRectangle(offsetX,
-                        offsetY-(staffLineDistance/4.0f),
-                        e->getDuration()*(drawWidth*scrollSpeed),
-                        staffLineDistance/2
-                        );
-        ofFill();
-        ofSetColor(ofColor::white);
         
+        // draw extra ledger lines if needed
+        int dist = abs(e->getStaffPosition());
+        if (dist > 5) {
+            int sign = e->getStaffPosition() / dist;
+            for (int i = 6; i <= dist; i++) {
+                
+                if (i%2 == 0) {
+                    ofSetColor(ofColor::white);
+                    ofDrawRectangle(offsetX-(staffLineDistance),
+                                    i * sign * staffLineDistance,
+                                    staffLineDistance*2,
+                                    staffLineThickness
+                                    );
+                }
+            }
+        }
+        
+        // Draw trailing duration box
+        if (e->getNoteType() != PIZZ) {
+            ofSetColor(ofColor::gray);
+            ofDrawRectangle(
+                            offsetX,
+                            offsetY-(staffLineDistance/4.0f),
+                            e->getDuration()*(drawWidth*scrollSpeed),
+                            staffLineDistance/2
+                            );
+            ofSetColor(ofColor::lightGray);
+            ofNoFill();
+            ofDrawRectangle(offsetX,
+                            offsetY-(staffLineDistance/4.0f),
+                            e->getDuration()*(drawWidth*scrollSpeed),
+                            staffLineDistance/2
+                            );
+            ofFill();
+            ofSetColor(ofColor::white);
+        }
+        
+        
+        // draw accidental
         string acc = "";
         if (e->getAccidental() == Accidental::SHARP) {
             acc = "#";
@@ -273,6 +346,8 @@ void Staff::drawNoteEvent(NoteEvent* &e) {
                                    offsetX-40,
                                    offsetY
                                    );
+        
+        // draw note head
         ofDrawEllipse(offsetX,
                       offsetY,
                       staffLineDistance*0.5,
@@ -280,6 +355,19 @@ void Staff::drawNoteEvent(NoteEvent* &e) {
                       );
     }
     e->tick(dTime);
+}
+
+void Staff::drawDynamicEvent(DynamicEvent* &d) {
+    float offsetX = d->getOffset()*scrollSpeed*drawWidth;
+    float offsetY = staffLineDistance*10;
+    
+    ofSetColor(ofColor::white);
+    dynamicsFont.drawString(d->getDynamicAsString(),
+                            offsetX - 50,
+                            offsetY
+                            );
+    
+    d->tick(dTime);
 }
 
 int Staff::degreeFromMidi(int note) {
@@ -310,6 +398,10 @@ int Staff::transposeForInstrument(int note) {
 
 NoteEvent* Staff::eventFromNote(Note note, float tempo) {
     float dur = 60.0f / tempo;
+    float dot = dur;
+    for (int i = 0; i < note.dots; i++) {
+        dur += dot /= 2;
+    }
     int midiNote = note.note;
     if (midiNote < -1 || midiNote > 127) {
         midiNote = (int)ofRandom(10, 117);
@@ -337,10 +429,15 @@ NoteEvent* Staff::eventFromNote(Note note, float tempo) {
         default:
             break;
     }
+    
+    if (ofRandom(1) < 0.05) {
+        Dynamic randDynamic = DynamicEvent::getRandomDynamic();
+        dynamics.push_back(new DynamicEvent(randDynamic, 3));
+    }
+    
     int degree = degreeFromMidi(transposeForInstrument(note.note));
-    //cout << note.note << " " << degree << " " << " " << Clef::ClefData.at(TREBLE).centerNote << endl;
     Accidental acc = degreeAccidentalFromMidi(note.note%12);
-    return new NoteEvent(note.note, degreeFromMidi(Clef::ClefData.at(TREBLE).centerNote) - degree, acc, 3, dur);
+    return new NoteEvent(note.note, note.type, degreeFromMidi(Clef::ClefData.at(clef).centerNote) - degree, acc, 3, dur);
 }
 
 InstrumentData* Staff::getDataForInstrument(Instrument _instrument) {

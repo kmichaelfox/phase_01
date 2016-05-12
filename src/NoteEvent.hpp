@@ -10,16 +10,19 @@
 #define NoteEvent_hpp
 
 #include <iostream>
+#include <vector>
+#include "Note.hpp"
 
 class ofxOscSender;
-//class ofTrueTypeFont;
 
 enum Accidental : short;
+//enum NoteType : short;
 
 class NoteEvent {
     int note;
     long int noteID;
     int staffPos;
+    NoteType type;
     Accidental acc;
     float offset = 0;
     float duration = 0;
@@ -30,7 +33,7 @@ class NoteEvent {
     static std::string addr;
     
 public:
-    NoteEvent(int note, int staffPos, Accidental acc, float offset, float duration);
+    NoteEvent(int note, NoteType t, int staffPos, Accidental acc, float offset, float duration);
     ~NoteEvent();
     void tick(float timeElapsed);
     
@@ -38,6 +41,7 @@ public:
     float getOffset();
     float getDuration();
     int getNote();
+    NoteType getNoteType();
     Accidental getAccidental();
     int getStaffPosition();
     bool isCompleted();
@@ -46,6 +50,11 @@ public:
     static std::string getOscAddr();
     static bool isOscSenderInit();
 };
+
+//enum NoteType : short {
+//    PIZZ = 0,
+//    ARCO = 1
+//};
 
 enum Accidental : short {
     FLAT = -1,
