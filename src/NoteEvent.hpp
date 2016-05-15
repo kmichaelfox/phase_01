@@ -49,6 +49,7 @@ public:
     static void setOscSender(ofxOscSender* s, std::string addr);
     static std::string getOscAddr();
     static bool isOscSenderInit();
+    static bool broadcast;
 };
 
 //enum NoteType : short {

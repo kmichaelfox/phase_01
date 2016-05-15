@@ -26,6 +26,11 @@ namespace Helpers {
     int scanForProcessPort(std::string processName, PortSearch::Type isBlocking);
     
     std::vector<Note> rangedMidiFromPitchClass(std::vector<Note> seq, Range r, bool octaveUp = false);
+    
+    template <typename T>
+    T clip(const T& n, const T& lower, const T& upper) {
+        return std::max(lower, std::min(n, upper));
+    }
 }
 
 

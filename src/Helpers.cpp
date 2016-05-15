@@ -52,7 +52,7 @@ vector<Note> Helpers::rangedMidiFromPitchClass(vector<Note> seq, Range r, bool o
     //int highestNote = 0;
     
     for (Note & n : seq) {
-        if (n.note < lowestNote) lowestNote = n.note;
+        if (n.note != -1 && n.note < lowestNote) lowestNote = n.note;
         //if (n.note > highestNote) highestNote = n.note;
     }
     
@@ -63,9 +63,13 @@ vector<Note> Helpers::rangedMidiFromPitchClass(vector<Note> seq, Range r, bool o
     if (octaveUp) octaveDisplacement++;
     
     for (Note & n : seq) {
-        int transposedNote = octaveDisplacement*12+n.note;
-        if (transposedNote > r.high) transposedNote -= 12;
-        s.push_back(Note(n, transposedNote));
+        if (n.note == -1) {
+            s.push_back(n);
+        } else {
+            int transposedNote = octaveDisplacement*12+n.note;
+            if (transposedNote > r.high) transposedNote -= 12;
+            s.push_back(Note(n, transposedNote));
+        }
     }
     
     return s;

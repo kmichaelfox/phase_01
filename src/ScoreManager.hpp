@@ -12,8 +12,10 @@
 #include <iostream>
 #include <vector>
 #include "Player.hpp"
+#include "ScoreScene.hpp"
 
 class ScoreManager {
+    ScoreScene scene;
     std::vector<Player *> players;
     Sequence seq;
     ofArduino ard;

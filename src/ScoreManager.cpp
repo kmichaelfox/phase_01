@@ -23,12 +23,12 @@ const AnalogRange b3 = {962, 963};
 const AnalogRange b4 = {965, 966};
 
 ScoreManager::ScoreManager() {
-    NoteEvent::setOscSender(new ofxOscSender(), "/phase01");
+    //NoteEvent::setOscSender(new ofxOscSender(), "/phase01");
     
     // TODO: Setup arduino listener
-    ard.connect("/dev/tty.usbmodem1421", 57600);
-    ofAddListener(ard.EInitialized, this, &ScoreManager::setupArduino);
     bSetupArduino = false;
+    if (!ard.connect("/dev/tty.usbmodem1421", 57600)) return;
+    ofAddListener(ard.EInitialized, this, &ScoreManager::setupArduino);
 }
 
 ScoreManager::~ScoreManager() {
@@ -51,7 +51,16 @@ void ScoreManager::draw() {
 }
 
 void ScoreManager::update() {
-    updateArduino();
+    if (bSetupArduino) updateArduino();
+    
+    scene.update();
+    if (scene.hasAvailableTriggers()) {
+        vector<int> triggers = scene.getTriggers();
+        for (int t : triggers) {
+            Player * p = players[t];
+            p->queueSequence(scene.getSequence(t), p->getTempo());
+        }
+    }
 }
 
 void ScoreManager::resize(int w, int h) {
@@ -59,10 +68,8 @@ void ScoreManager::resize(int w, int h) {
     
     for (Player * &p : players) {
         if (windowAspect < p->getAspectRatio()) {
-            //        fbo.draw(0, 0, ofGetWindowWidth(), ofGetWindowWidth() * fbo.getHeight() / fbo.getWidth());
             p->setWidth(ofGetWindowWidth()/dimensions);
         } else {
-            //        fbo.draw(0, 0, ofGetWindowHeight() * fbo.getWidth() / fbo.getHeight(), ofGetWindowHeight());
             p->setHeight(ofGetWindowHeight()/dimensions);
         }
     }
@@ -93,29 +100,58 @@ void ScoreManager::newSequence() {
         players[(int)ofRandom(players.size())]->activate(true);
     }
     
+    bool firstSeq = scene.isEmpty();
+    
+    if (firstSeq) scene.setNoteType((ofRandom(2) < 1) ? PIZZ : ARCO);
+    
     Sequence s;
     int sequenceLength = ofRandom(15) + 3;
+    int lowerBound = 0;
+    int upperBound = 15;
+    s.push_back(Note((int)ofRandom(lowerBound, upperBound),
+                     (NoteLength)((int)ofRandom(2, 5)),
+                     scene.getNoteType()));
     for (int i = 0; i < sequenceLength; i++) {
-        if (ofRandom(10) > 0.5) {
-            s.push_back(Note((int)ofRandom(0, 15), (NoteLength)((int)ofRandom(2, 5)), PIZZ));
+        int prev = s.back().note;
+        if (prev == -1) {
+            prev = s.front().note;
+        }
+        bool ascend = (ofRandom(2) > 1);
+        if ((ascend && prev == upperBound) || (!ascend && prev == lowerBound)) {
+            ascend = !ascend;
+        }
+        int next = prev;
+        if (ascend) {
+            next += ((int)ofRandom(7));
         } else {
-            s.push_back((Note(-1, (NoteLength)((int)ofRandom(2, 5)), PIZZ)));
+            next -= ((int)ofRandom(7));
+        }
+        next = Helpers::clip(next, lowerBound, upperBound);
+        if (ofRandom(10) > 1.6) {
+            s.push_back(Note((int)next, (NoteLength)((int)ofRandom(2, 5)), scene.getNoteType()));
+        } else {
+            s.push_back(Note(-1,
+                             (NoteLength)((int)ofRandom(2, 5)),
+                             scene.getNoteType())
+                        );
         }
     }
-//    for (int i = 0; i < sequenceLength; i++) {
-//        if (ofRandom(10) > 0.5) {
-//            s.push_back(Note((int)ofRandom(55, 80), (NoteLength)((int)ofRandom(2, 4.9)), PIZZ));
-//        } else {
-//            s.push_back((Note(-1, (NoteLength)((int)ofRandom(2, 4.9)), PIZZ)));
-//        }
-//    }
     
     // TODO: switch to permutation functions from single operator below
     
+    if (!firstSeq) {
+        NoteType t = scene.getNoteType();
+        scene = ScoreScene();
+        // 60% chance to use same technique, else switch to the other
+        scene.setNoteType((ofRandom(10) < 6) ? t : (NoteType)((t+1)%2));
+    }
     
     for (Player *& p : players) {
-        p->queueSequence(Helpers::rangedMidiFromPitchClass(s, p->getRange(), p->isFirstChair()), p->getTempo());
+        //p->queueSequence(Helpers::rangedMidiFromPitchClass(s, p->getRange(), p->isFirstChair()), p->getTempo());
+        scene.addPlayerSequence(Helpers::rangedMidiFromPitchClass(s, p->getRange(), p->isFirstChair()));
     }
+    //if (!firstSeq) scene.generateTimers();
+    scene.generateTimers();
 }
 
 void ScoreManager::activate(int playerNum) {
@@ -147,7 +183,7 @@ void ScoreManager::resume() {
     if (!seq.empty()) {
         newSequence();
     } else {
-        // TODO: push existing sequence back to players again
+        scene.generateTimers();
     }
 }
 

@@ -6,6 +6,7 @@
 //--------------------------------------------------------------
 void ofApp::setup(){
     //windowAspect = ofGetWindowWidth() / ofGetWindowHeight();
+    //ofSetFrameRate(30.0);
     ofSetBackgroundColor(ofColor::black);
     manager.resize(ofGetWindowWidth(), ofGetWindowHeight());
     
@@ -34,6 +35,13 @@ void ofApp::update(){
 //--------------------------------------------------------------
 void ofApp::draw(){
     manager.draw();
+    
+    if (fps) {
+        ofSetColor(ofColor::white);
+        ofDrawBitmapString(ofGetFrameRate(),
+                           100,
+                           ofGetScreenHeight() - 100);
+    }
 }
 
 //--------------------------------------------------------------
@@ -51,6 +59,16 @@ void ofApp::keyPressed(int key){
                 manager.stop();
             } else {
                 manager.pause();
+            }
+            break;
+        }
+            
+        case 'f':
+            fps = !fps;
+            
+        case 'o': {
+            if (NoteEvent::isOscSenderInit()) {
+                NoteEvent::broadcast = !NoteEvent::broadcast;
             }
             break;
         }

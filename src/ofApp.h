@@ -36,6 +36,7 @@ class ofApp : public ofBaseApp{
     int activeHighlightBorderSize = 5;
     
     bool cmd = false;
+    bool fps = false;
     
     //Player *p;
     //vector<Player *> players;

@@ -77,10 +77,12 @@ Staff::~Staff() {
         ne->toggleNoteOff();
         delete ne;
     }
+    activeNotes.clear();
     
     for (DynamicEvent* &de : dynamics) {
         delete de;
     }
+    dynamics.clear();
     
     if (instrument != nullptr) {
         delete instrument;
@@ -168,26 +170,40 @@ void Staff::draw(float x, float y) {
     //positionX -= (dTime * scrollSpeed * drawWidth);
     
     // clean up completed NoteEvents in activeNotes
-    for (auto it = activeNotes.begin(); it != activeNotes.end(); ++it) {
-        if ((*it)->isCompleted()) {
-            delete (*it);
-            activeNotes.erase(it);
-        }
+    while(!activeNotes.empty() && activeNotes.front()->isCompleted()) {
+        delete activeNotes.front();
+        activeNotes.pop_front();
     }
+//    for (auto it = activeNotes.begin(); it != activeNotes.end();) {
+//        if ((*it)->isCompleted()) {
+//            delete (*it);
+//            it = activeNotes.erase(it);
+//        } else {
+//            ++it;
+//        }
+//    }
     
     // clean up inactive DynamicEvents in dynamics
-    for (auto it = dynamics.begin(); it != dynamics.end(); ++it) {
-        if ((*it)->isCompleted()) {
-            delete (*it);
-            dynamics.erase(it);
-        }
-        if ((it+1) != dynamics.end()) {
-            if ((*(it+1))->getOffset() < 0.5) {
-                delete (*it);
-                dynamics.erase(it);
-            }
+    if (dynamics.size() > 1) {
+        DynamicEvent * d = dynamics.front();
+        dynamics.pop_front();
+        
+        if (dynamics.front()->getOffset() < 0.5) {
+            delete d;
+        } else {
+            dynamics.push_front(d);
         }
     }
+//    for (auto it = dynamics.begin(); it != dynamics.end();) {
+//        if ((it+1) != dynamics.end()) {
+//            if ((*(it+1))->getOffset() < 0.5) {
+//                delete (*it);
+//                it = dynamics.erase(it);
+//            }
+//        } else {
+//            ++it;
+//        }
+//    }
     
     // increment nextNote counter
     if (!sequences.empty()) {
@@ -430,6 +446,11 @@ NoteEvent* Staff::eventFromNote(Note note, float tempo) {
             break;
     }
     
+    if (midiNote == -1) {
+        cout << "creating a rest" << endl;
+        return new NoteEvent(note.note, note.type, -1, NATURAL, 3, dur);
+    }
+    
     if (ofRandom(1) < 0.05) {
         Dynamic randDynamic = DynamicEvent::getRandomDynamic();
         dynamics.push_back(new DynamicEvent(randDynamic, 3));
@@ -535,7 +556,7 @@ InstrumentData* Staff::getDataForInstrument(Instrument _instrument) {
             break;
             
         case VIOLA:
-            return new InstrumentData(_instrument, 0, ALTO, 38, 91);
+            return new InstrumentData(_instrument, 0, ALTO, 48, 91);
             break;
             
         case VIOLONCELLO:

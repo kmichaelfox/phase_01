@@ -14,6 +14,7 @@
 long int NoteEvent::noteIDCounter = 0;
 auto_ptr<ofxOscSender> NoteEvent::oscSender;
 string NoteEvent::addr;
+bool NoteEvent::broadcast = false;
 
 NoteEvent::NoteEvent(int note, NoteType t, int staffPos, Accidental acc, float offset, float duration)
 : note(note)
@@ -27,7 +28,7 @@ NoteEvent::NoteEvent(int note, NoteType t, int staffPos, Accidental acc, float o
 
 NoteEvent::~NoteEvent() {
     // send noteoff via osc
-    if (note >= 0 && NoteEvent::isOscSenderInit() && type == ARCO) {
+    if (NoteEvent::broadcast && note >= 0 && NoteEvent::isOscSenderInit() && type == ARCO) {
         ofxOscMessage msg;
         msg.setAddress(NoteEvent::getOscAddr());
         msg.addInt32Arg(noteID);
@@ -45,7 +46,7 @@ void NoteEvent::tick(float timeElapsed) {
             offset = 0;
             
             active = true;
-            if (note >= 0 && NoteEvent::isOscSenderInit()) {
+            if (NoteEvent::broadcast && note >= 0 && NoteEvent::isOscSenderInit()) {
                 ofxOscMessage msg;
                 msg.setAddress(NoteEvent::getOscAddr());
                 msg.addInt32Arg(noteID);
@@ -58,7 +59,7 @@ void NoteEvent::tick(float timeElapsed) {
     } else {
         if (!active) {
             // send noteon via osc
-            if (note >= 0 && NoteEvent::isOscSenderInit()) {
+            if (NoteEvent::broadcast && note >= 0 && NoteEvent::isOscSenderInit()) {
                 ofxOscMessage msg;
                 msg.setAddress(NoteEvent::getOscAddr());
                 msg.addInt32Arg(noteID);
@@ -74,7 +75,7 @@ void NoteEvent::tick(float timeElapsed) {
 }
 
 void NoteEvent::toggleNoteOff() {
-    if (note >= 0 && NoteEvent::isOscSenderInit() && type == ARCO) {
+    if (NoteEvent::broadcast && note >= 0 && NoteEvent::isOscSenderInit() && type == ARCO) {
         ofxOscMessage msg;
         msg.setAddress(NoteEvent::getOscAddr());
         msg.addInt32Arg(noteID);
